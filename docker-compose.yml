@@ -1,0 +1,116 @@
+﻿services:
+  mysql:
+    image: mysql:8.0
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql-data:/var/lib/mysql
+      - ./infra/mysql/init.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-proot"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  mongodb:
+    image: mongo:6
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo-data:/data/db
+
+  eureka:
+    build:
+      context: ./services/eureka-service
+    container_name: eureka
+    ports:
+      - "8761:8761"
+
+  restaurant-service:
+    build:
+      context: ./services/restaurant-listing-ms
+    depends_on:
+      mysql:
+        condition: service_healthy
+      eureka:
+        condition: service_started
+    ports:
+      - "9091:9091"
+    environment:
+      SPRING_PROFILES_ACTIVE: local
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka:8761/eureka/
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/restaurantdb
+      SPRING_DATASOURCE_USERNAME: root
+      SPRING_DATASOURCE_PASSWORD: root
+
+  food-catalogue-service:
+    build:
+      context: ./services/food-catalogue-ms
+    depends_on:
+      mysql:
+        condition: service_healthy
+      eureka:
+        condition: service_started
+      restaurant-service:
+        condition: service_started
+    ports:
+      - "9092:9092"
+    environment:
+      SPRING_PROFILES_ACTIVE: local
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka:8761/eureka/
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/foodcataloguedb
+      SPRING_DATASOURCE_USERNAME: root
+      SPRING_DATASOURCE_PASSWORD: root
+
+  user-service:
+    build:
+      context: ./services/user-service
+    depends_on:
+      mysql:
+        condition: service_healthy
+      eureka:
+        condition: service_started
+    ports:
+      - "9093:9093"
+    environment:
+      SPRING_PROFILES_ACTIVE: local
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka:8761/eureka/
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/userdb
+      SPRING_DATASOURCE_USERNAME: root
+      SPRING_DATASOURCE_PASSWORD: root
+
+  order-service:
+    build:
+      context: ./services/order-service
+    depends_on:
+      mongodb:
+        condition: service_started
+      eureka:
+        condition: service_started
+      food-catalogue-service:
+        condition: service_started
+      user-service:
+        condition: service_started
+    ports:
+      - "9094:9094"
+    environment:
+      SPRING_PROFILES_ACTIVE: local
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka:8761/eureka/
+      SPRING_DATA_MONGODB_URI: mongodb://mongodb:27017/orderdb
+
+  frontend:
+    build:
+      context: ./apps/food-delivery-app-fe
+    depends_on:
+      - restaurant-service
+      - food-catalogue-service
+      - user-service
+      - order-service
+    ports:
+      - "4200:80"
+
+volumes:
+  mysql-data:
+  mongo-data:

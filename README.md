@@ -36,3 +36,17 @@ mvn spring-boot:run
 
 - This monorepo was created by combining the source repos into one Git repository (nested .git directories removed).
 - If you need to preserve each repo\'s git history inside the monorepo, we can re-import using `git subtree`.
+
+## Run everything with Docker Compose
+
+Prereqs: Docker Desktop + Docker Compose v2
+
+Run:
+- .\\scripts\\up.ps1
+Stop (and delete volumes):
+- .\\scripts\\down.ps1
+
+URLs:
+- Eureka: http://localhost:8761
+- Frontend: http://localhost:4200
+
