@@ -1,0 +1,21 @@
+﻿# OS / tooling
+.DS_Store
+Thumbs.db
+
+# Node
+node_modules/
+dist/
+build/
+*.log
+
+# Java / Maven / Gradle
+**/target/
+**/.gradle/
+
+# IDE
+.vscode/
+.idea/
+*.iml
+
+# Local env
+.env
